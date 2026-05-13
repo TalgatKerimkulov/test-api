@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
+use App\Http\Controllers\Admin\FileController as AdminFileController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ProviderController as AdminProviderController;
 use App\Http\Controllers\BatchProfitController;
@@ -72,6 +73,15 @@ Route::prefix('v1')->group(function (): void {
                 Route::post('/update', [AdminProductController::class, 'update']);
                 Route::post('/delete', [AdminProductController::class, 'delete']);
                 Route::get('/item-list', [AdminProductController::class, 'itemList']);
+            });
+
+            Route::prefix('file')->group(function (): void {
+                Route::post('/create', [AdminFileController::class, 'create']);
+                Route::get('/index', [AdminFileController::class, 'index']);
+                Route::get('/show', [AdminFileController::class, 'show']);
+                Route::post('/update', [AdminFileController::class, 'update']);
+                Route::post('/delete', [AdminFileController::class, 'delete']);
+                Route::get('/item-list', [AdminFileController::class, 'itemList']);
             });
         });
 

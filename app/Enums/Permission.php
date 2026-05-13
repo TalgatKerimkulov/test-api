@@ -55,6 +55,13 @@ enum Permission: string
     case ReportsStockRemaining = 'reports.stock_remaining';
     case ReportsBatchProfit = 'reports.batch_profit';
 
+    case FilesIndex = 'files.index';
+    case FilesShow = 'files.show';
+    case FilesCreate = 'files.create';
+    case FilesUpdate = 'files.update';
+    case FilesDelete = 'files.delete';
+    case FilesItemList = 'files.itemList';
+
     public static function values(): array
     {
         return array_map(fn (self $p) => $p->value, self::cases());

@@ -7,12 +7,18 @@ servers:
   - url: /api/v1
 tags:
   - name: Auth
+  - name: Legacy Users
+  - name: Legacy Roles
+  - name: Legacy Clients
+  - name: Legacy Storages
+  - name: Business Operations
   - name: Legacy Categories
   - name: Legacy Providers
   - name: Legacy Products
   - name: Admin Categories
   - name: Admin Providers
   - name: Admin Products
+  - name: Admin Files
 paths:
   /auth/login:
     post:
@@ -35,6 +41,39 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
+  /auth/admin/login:
+    post:
+      tags: [Auth]
+      summary: Login as admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginPayload' }
+      responses:
+        '200': { description: OK }
+  /auth/client/login:
+    post:
+      tags: [Auth]
+      summary: Login as client
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginPayload' }
+      responses:
+        '200': { description: OK }
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterPayload' }
+      responses:
+        '201': { description: Created }
 
   /auth/me:
     get:
@@ -44,6 +83,232 @@ paths:
       responses:
         '200':
           description: OK
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: OK }
+  /auth/client/company-create:
+    post:
+      tags: [Auth]
+      summary: Create company for current client
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProviderCreatePayload' }
+      responses:
+        '201': { description: Created }
+
+  /users:
+    get:
+      tags: [Legacy Users]
+      summary: List users
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [Legacy Users]
+      summary: Create user
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Created }
+  /users/{id}:
+    get:
+      tags: [Legacy Users]
+      summary: Show user
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/IdPath' }]
+      responses:
+        '200': { description: OK }
+    put:
+      tags: [Legacy Users]
+      summary: Update user
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/IdPath' }]
+      responses:
+        '200': { description: OK }
+    delete:
+      tags: [Legacy Users]
+      summary: Delete user
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/IdPath' }]
+      responses:
+        '200': { description: OK }
+  /users/{id}/roles:
+    post:
+      tags: [Legacy Roles]
+      summary: Assign role to user
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/IdPath' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role: { type: string, example: manager }
+      responses:
+        '200': { description: OK }
+  /roles:
+    get:
+      tags: [Legacy Roles]
+      summary: List roles
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: OK }
+  /permissions:
+    get:
+      tags: [Legacy Roles]
+      summary: List permissions
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: OK }
+
+  /clients:
+    get:
+      tags: [Legacy Clients]
+      summary: List clients
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [Legacy Clients]
+      summary: Create client
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Created }
+  /clients/{id}:
+    get:
+      tags: [Legacy Clients]
+      summary: Show client
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/IdPath' }]
+      responses:
+        '200': { description: OK }
+    put:
+      tags: [Legacy Clients]
+      summary: Update client
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/IdPath' }]
+      responses:
+        '200': { description: OK }
+    delete:
+      tags: [Legacy Clients]
+      summary: Delete client
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/IdPath' }]
+      responses:
+        '200': { description: OK }
+
+  /storages:
+    get:
+      tags: [Legacy Storages]
+      summary: List storages
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [Legacy Storages]
+      summary: Create storage
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Created }
+  /storages/{id}:
+    get:
+      tags: [Legacy Storages]
+      summary: Show storage
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/IdPath' }]
+      responses:
+        '200': { description: OK }
+    put:
+      tags: [Legacy Storages]
+      summary: Update storage
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/IdPath' }]
+      responses:
+        '200': { description: OK }
+    delete:
+      tags: [Legacy Storages]
+      summary: Delete storage
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/IdPath' }]
+      responses:
+        '200': { description: OK }
+  /storages/remaining-quantities:
+    get:
+      tags: [Business Operations]
+      summary: Remaining quantities by date
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: date
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        '200': { description: OK }
+
+  /purchases:
+    post:
+      tags: [Business Operations]
+      summary: Create purchase batch
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Created }
+  /provider-refunds:
+    post:
+      tags: [Business Operations]
+      summary: Provider refund
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Created }
+  /client-orders:
+    post:
+      tags: [Business Operations]
+      summary: Create client order (FIFO)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Created }
+  /client-refunds:
+    post:
+      tags: [Business Operations]
+      summary: Client refund
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Created }
+  /products/available:
+    get:
+      tags: [Business Operations]
+      summary: Available products for ordering
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: OK }
+  /batches/profit:
+    get:
+      tags: [Business Operations]
+      summary: Batch profit report
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: from
+          schema: { type: string, format: date }
+        - in: query
+          name: to
+          schema: { type: string, format: date }
+        - in: query
+          name: batch_id
+          schema: { type: integer }
+        - in: query
+          name: provider_id
+          schema: { type: integer }
+      responses:
+        '200': { description: OK }
 
   /categories:
     get:
@@ -480,6 +745,105 @@ paths:
       responses:
         '200': { description: OK }
 
+  /admin/file/index:
+    get:
+      tags: [Admin Files]
+      summary: File index
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+      responses:
+        '200': { description: OK }
+  /admin/file/show:
+    get:
+      tags: [Admin Files]
+      summary: File show
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: OK }
+  /admin/file/create:
+    post:
+      tags: [Admin Files]
+      summary: File upload
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [attachment]
+              properties:
+                attachment:
+                  type: string
+                  format: binary
+                type:
+                  type: string
+                  example: product
+                disk:
+                  type: string
+                  example: public
+      responses:
+        '201': { description: Created }
+  /admin/file/update:
+    post:
+      tags: [Admin Files]
+      summary: Replace uploaded file
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id: { type: integer }
+                attachment:
+                  type: string
+                  format: binary
+                disk:
+                  type: string
+      responses:
+        '200': { description: OK }
+  /admin/file/delete:
+    post:
+      tags: [Admin Files]
+      summary: Delete file
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id: { type: integer }
+      responses:
+        '200': { description: OK }
+  /admin/file/item-list:
+    get:
+      tags: [Admin Files]
+      summary: File item list
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: search
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -502,6 +866,20 @@ components:
           nullable: true
         token:
           type: string
+    LoginPayload:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+    RegisterPayload:
+      type: object
+      required: [name, email, password, password_confirmation]
+      properties:
+        name: { type: string }
+        email: { type: string, format: email }
+        password: { type: string }
+        password_confirmation: { type: string }
     CategoryCreatePayload:
       type: object
       required: [name]
