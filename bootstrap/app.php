@@ -1,6 +1,9 @@
 <?php
 
 use App\Exceptions\DomainException;
+use App\Exceptions\ApiException;
+use App\Http\Middleware\AdminScopeMiddleware;
+use App\Http\Middleware\CheckPermissionMiddleware;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
@@ -24,9 +27,24 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'permission' => PermissionMiddleware::class,
             'role' => RoleMiddleware::class,
+            'admin.scope' => AdminScopeMiddleware::class,
+            'check.permission' => CheckPermissionMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->render(function (ApiException $e, Request $request) {
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'success' => false,
+                    'error' => [
+                        'message' => $e->getMessage(),
+                        'code' => $e->errorCode() ?? $e->httpStatus(),
+                    ],
+                    'result' => null,
+                ], $e->httpStatus());
+            }
+        });
+
         $exceptions->render(function (DomainException $e, Request $request) {
             if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json($e->toArray(), $e->statusCode());
