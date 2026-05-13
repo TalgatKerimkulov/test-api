@@ -221,6 +221,7 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 - `/api/v1/admin/category/{create,index,show,update,delete,item-list}`
 - `/api/v1/admin/provider/{create,index,show,update,delete,item-list}`
 - `/api/v1/admin/product/{create,index,show,update,delete,item-list}`
+- `/api/v1/admin/file/{create,index,show,update,delete,item-list}`
 
 ### Swagger
 
@@ -442,7 +443,7 @@ profit = gross_sales - client_refund_loss - purchase_cost_for_sold
 docker compose exec app php artisan test
 ```
 
-43 feature-теста (Pest, RefreshDatabase на PostgreSQL):
+Feature tests (Pest, RefreshDatabase на PostgreSQL):
 
 **Бизнес-логика:**
 - `PurchaseTest` — создание партии, инкремент склада, журнал движений.
@@ -468,17 +469,19 @@ docker compose exec app php artisan test
 ```
 app/
   Http/
-    Controllers/   7 тонких контроллеров
+    Controllers/   legacy + admin modular controllers
     Requests/      6 FormRequest
-    Resources/     Batch, Order, PurchaseRefund, ClientRefund, BatchItem, OrderItem
+    Resources/     Batch, Order, PurchaseRefund, ClientRefund, BatchItem, OrderItem, etc.
   Services/        Purchase, Order (FIFO), PurchaseRefund, ClientRefund, Stock, AvailableProduct, BatchProfit
-  Models/          14 Eloquent моделей (User включает type-дискриминатор)
+  Models/          domain models + File model
   DTO/             PurchasePayload, OrderPayload, PurchaseRefundPayload, ClientRefundPayload + Line-DTO
   Enums/           UserType, BatchStatus, OrderStatus, RefundStatus, StockMovementType
-  Exceptions/      DomainException + 5 конкретных (InsufficientStock, RefundExceedsAvailable, …)
+  Exceptions/      DomainException + ApiException + business exceptions
+  Actions/         modular admin actions (Category, Provider, Product, File)
+  Presenters/      ApiViewModel, ErrorViewModel, module view-models
 
 database/
-  migrations/      16 миграций с CHECK constraints, partial indexes, generated columns
+  migrations/      domain migrations + files table + user/provider link
   factories/       UserFactory (admin/manager/client states), Provider, Category, Product, Storage, Batch, BatchItem, Order
   seeders/         DemoSeeder — данные для FIFO split, заказов, refund-сценариев
 
