@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\Role;
+use App\Enums\UserType;
 use App\Models\User;
 
 it('registers a new user and returns a token', function () {
@@ -65,6 +66,78 @@ it('logs out the user and revokes the token', function () {
 
     $response->assertOk();
     $response->assertJson(['message' => 'Successfully logged out']);
+});
+
+it('allows admin login only for admin users', function () {
+    $admin = User::factory()->admin()->create([
+        'email' => 'admin-login@example.com',
+        'password' => 'password',
+    ]);
+    $admin->syncRoles([\Spatie\Permission\Models\Role::findByName(Role::Admin->value, 'sanctum')]);
+
+    $client = User::factory()->create([
+        'email' => 'client-login@example.com',
+        'password' => 'password',
+    ]);
+    $client->syncRoles([\Spatie\Permission\Models\Role::findByName(Role::Client->value, 'sanctum')]);
+
+    $ok = $this->postJson('/api/v1/auth/admin/login', [
+        'email' => 'admin-login@example.com',
+        'password' => 'password',
+    ]);
+    $ok->assertOk();
+
+    $forbidden = $this->postJson('/api/v1/auth/admin/login', [
+        'email' => 'client-login@example.com',
+        'password' => 'password',
+    ]);
+    $forbidden->assertStatus(422);
+});
+
+it('allows client login only for client users', function () {
+    $client = User::factory()->create([
+        'email' => 'client-only@example.com',
+        'password' => 'password',
+    ]);
+    $client->syncRoles([\Spatie\Permission\Models\Role::findByName(Role::Client->value, 'sanctum')]);
+
+    $admin = User::factory()->admin()->create([
+        'email' => 'admin-only@example.com',
+        'password' => 'password',
+    ]);
+    $admin->syncRoles([\Spatie\Permission\Models\Role::findByName(Role::Admin->value, 'sanctum')]);
+
+    $ok = $this->postJson('/api/v1/auth/client/login', [
+        'email' => 'client-only@example.com',
+        'password' => 'password',
+    ]);
+    $ok->assertOk();
+
+    $forbidden = $this->postJson('/api/v1/auth/client/login', [
+        'email' => 'admin-only@example.com',
+        'password' => 'password',
+    ]);
+    $forbidden->assertStatus(422);
+});
+
+it('client can create and attach company', function () {
+    $user = User::factory()->create(['type' => UserType::Client->value]);
+    $user->syncRoles([\Spatie\Permission\Models\Role::findByName(Role::Client->value, 'sanctum')]);
+    $this->actingAs($user, 'sanctum');
+
+    $response = $this->postJson('/api/v1/auth/client/company-create', [
+        'name' => 'Client Company',
+        'inn' => '123456789',
+        'email' => 'company@example.com',
+        'phone' => '+998901112233',
+    ]);
+
+    $response->assertCreated();
+    $response->assertJsonPath('provider.name', 'Client Company');
+    $this->assertDatabaseHas('users', [
+        'id' => $user->id,
+        'provider_id' => $response->json('provider.id'),
+    ]);
 });
 
 it('returns the current authenticated user from /me', function () {

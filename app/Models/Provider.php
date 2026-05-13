@@ -26,4 +26,9 @@ class Provider extends Model
     {
         return $this->hasMany(Category::class);
     }
+
+    public function users(): HasMany
+    {
+        return $this->hasMany(User::class);
+    }
 }

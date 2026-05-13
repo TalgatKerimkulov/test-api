@@ -27,6 +27,7 @@ class RolesAndPermissionsSeeder extends Seeder
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $adminRole = Role::findOrCreate(RoleEnum::Admin->value, 'sanctum');
+        $clientRole = Role::findOrCreate(RoleEnum::Client->value, 'sanctum');
         $managerRole = Role::findOrCreate(RoleEnum::Manager->value, 'sanctum');
         $accountantRole = Role::findOrCreate(RoleEnum::Accountant->value, 'sanctum');
         $warehouseRole = Role::findOrCreate(RoleEnum::WarehouseManager->value, 'sanctum');
@@ -75,6 +76,24 @@ class RolesAndPermissionsSeeder extends Seeder
             PermissionEnum::PurchasesCreate->value,
             PermissionEnum::PurchasesRefund->value,
             PermissionEnum::BatchesView->value,
+            PermissionEnum::ReportsStockRemaining->value,
+        ]);
+
+        $clientRole->syncPermissions([
+            PermissionEnum::ClientsView->value,
+            PermissionEnum::ClientsCreate->value,
+            PermissionEnum::ClientsUpdate->value,
+            PermissionEnum::ProductsView->value,
+            PermissionEnum::ProductsCreate->value,
+            PermissionEnum::ProductsUpdate->value,
+            PermissionEnum::CategoriesView->value,
+            PermissionEnum::StoragesView->value,
+            PermissionEnum::PurchasesView->value,
+            PermissionEnum::PurchasesCreate->value,
+            PermissionEnum::PurchasesRefund->value,
+            PermissionEnum::ClientOrdersView->value,
+            PermissionEnum::ClientOrdersCreate->value,
+            PermissionEnum::ClientOrdersRefund->value,
             PermissionEnum::ReportsStockRemaining->value,
         ]);
 
