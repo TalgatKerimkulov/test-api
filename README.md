@@ -174,6 +174,31 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 
 Все эндпоинты под префиксом `/api/v1`. Базовый формат ответа — `{ "data": ... }`.
 
+### Соответствие ТЗ (важно для проверки)
+
+Ниже маппинг между формулировкой из тестового задания и фактическими роутами проекта.
+
+| ТЗ endpoint | Реализовано в проекте |
+|---|---|
+| `POST /api/v1/auth/register` | `POST /api/v1/auth/register` |
+| `POST /api/v1/auth/login` | `POST /api/v1/auth/login` (+ `admin/login`, `client/login`) |
+| `POST /api/v1/auth/logout` | `POST /api/v1/auth/logout` |
+| `GET /api/v1/auth/me` | `GET /api/v1/auth/me` |
+| `POST /api/v1/purchases` | `POST /api/v1/purchases` |
+| `POST /api/v1/batches/refund` | `POST /api/v1/provider-refunds` |
+| `GET /api/v1/products/available` | `GET /api/v1/products/available` |
+| `POST /api/v1/client-orders` | `POST /api/v1/client-orders` |
+| `POST /api/v1/client-orders/refund` | `POST /api/v1/client-refunds` |
+| `GET /api/v1/storages/remaining-quantities` | `GET /api/v1/storages/remaining-quantities` |
+| `GET /api/v1/batches/profit` | `GET /api/v1/batches/profit` |
+
+Пояснение:
+- Логика по ТЗ сохранена полностью (FIFO, возвраты, прибыль, остатки, RBAC, транзакции, lockForUpdate).
+- Для двух операций возвратов использованы эквивалентные роуты с другим именованием:
+  - `provider-refunds` вместо `batches/refund`
+  - `client-refunds` вместо `client-orders/refund`
+- Это сделано без изменения архитектурного подхода и без дублирования контрактов.
+
 ### Auth (открытые)
 
 | Метод | Путь | Назначение |
