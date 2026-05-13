@@ -50,9 +50,10 @@ REST API для учёта партионной закупки, продажи (
 
 ```
 HTTP layer
- ├─ Controllers        тонкие, маршрутизация → сервис → Resource
- ├─ FormRequests       валидация
- └─ Resources          сериализация наружу
+ ├─ Legacy Controllers тонкие, маршрутизация → сервис → Resource
+ ├─ Admin Controllers  thin controllers: Request -> ActionData -> Action -> Presenter
+ ├─ FormRequests / ActionData validation
+ └─ Resources / Presenters
 
 Application layer
  ├─ Services           бизнес-операции (DB::transaction + lockForUpdate)
@@ -70,6 +71,9 @@ Domain layer
 - Каждая запись в >1 таблицу обёрнута в `DB::transaction()`.
 - FIFO и возвраты держат `lockForUpdate` на `batch_items` / `order_items` — без этого возможен overselling.
 - Frontend **никогда** не передаёт `batch_id` — это бизнес-инвариант, его выбирает сервер.
+- Для модульных admin endpoints используется envelope:
+  - `{ "success": true, "result": ... }`
+  - `{ "success": false, "error": {...}, "result": null }`
 
 ---
 
@@ -106,6 +110,9 @@ docker compose logs -f app
 # Tinker
 docker compose exec app php artisan tinker
 
+# Swagger UI
+open http://localhost:8080/swagger
+
 # Стоп
 docker compose down
 
@@ -124,7 +131,11 @@ docker compose down -v
 ## Авторизация и RBAC
 
 - Все защищённые эндпоинты требуют Bearer токен (`Authorization: Bearer <token>`).
-- Токены выдаются через `POST /api/v1/auth/login` и хранятся через **Laravel Sanctum**.
+- Токены выдаются через:
+  - `POST /api/v1/auth/admin/login`
+  - `POST /api/v1/auth/client/login`
+  - `POST /api/v1/auth/login` (legacy compatibility)
+  и хранятся через **Laravel Sanctum**.
 - Роли и права — **spatie/laravel-permission**, guard `sanctum`.
 
 ### Системные роли (создаются сеедером)
@@ -132,6 +143,7 @@ docker compose down -v
 | Роль | Права |
 |---|---|
 | `admin` | все |
+| `client` | может покупать и продавать (client-orders + purchases + related views/create/update) |
 | `manager` | работа с клиентами, заказами, возвратами клиентов |
 | `accountant` | просмотр закупок, заказов, прибыли, остатков |
 | `warehouse_manager` | работа с поставщиками, товарами, складами, закупками, возвратами поставщику |
@@ -167,7 +179,9 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 | Метод | Путь | Назначение |
 |---|---|---|
 | POST | `/api/v1/auth/register` | регистрация (выдаёт токен) |
-| POST | `/api/v1/auth/login` | вход (выдаёт токен) |
+| POST | `/api/v1/auth/login` | вход (legacy) |
+| POST | `/api/v1/auth/admin/login` | вход только для `admin` |
+| POST | `/api/v1/auth/client/login` | вход только для `client` |
 
 ### Auth (требуют токен)
 
@@ -175,6 +189,18 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 |---|---|---|
 | POST | `/api/v1/auth/logout` | удалить текущий токен |
 | GET | `/api/v1/auth/me` | данные текущего пользователя |
+| POST | `/api/v1/auth/client/company-create` | создать company (provider) и привязать к client |
+
+### Admin modular endpoints
+
+- `/api/v1/admin/category/{create,index,show,update,delete,item-list}`
+- `/api/v1/admin/provider/{create,index,show,update,delete,item-list}`
+- `/api/v1/admin/product/{create,index,show,update,delete,item-list}`
+
+### Swagger
+
+- UI: `/swagger`
+- OpenAPI spec: `/docs/openapi.yaml`
 
 ### Управление пользователями и ролями
 
@@ -292,6 +318,29 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 | 404 | Сущность не найдена |
 | 409 | Бизнес-конфликт: `insufficient_stock`, `refund_exceeds_available`, `refund_exceeds_sold`, `*_has_relations` |
 | 500 | Неожиданная ошибка |
+
+---
+
+## Queue Troubleshooting
+
+Если `testapi-queue` не стартует с ошибкой:
+
+`Composer detected issues in your platform ... require PHP >= 8.4.0`
+
+проверьте версию PHP в контейнере:
+
+```bash
+docker compose exec app php -v
+docker compose run --rm queue php -v
+```
+
+и пересоберите образы без кэша:
+
+```bash
+docker compose build --no-cache app queue
+docker compose up -d app queue
+docker compose logs -f queue
+```
 
 ---
 

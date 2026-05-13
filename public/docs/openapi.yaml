@@ -1,0 +1,549 @@
+openapi: 3.0.3
+info:
+  title: Test API
+  version: 1.0.0
+  description: API documentation for test-api (legacy and admin modular endpoints).
+servers:
+  - url: /api/v1
+tags:
+  - name: Auth
+  - name: Legacy Categories
+  - name: Legacy Providers
+  - name: Legacy Products
+  - name: Admin Categories
+  - name: Admin Providers
+  - name: Admin Products
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email, example: admin@example.com }
+                password: { type: string, example: password }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Current user
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+
+  /categories:
+    get:
+      tags: [Legacy Categories]
+      summary: List categories (legacy)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: tree
+          schema: { type: boolean, default: true }
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [Legacy Categories]
+      summary: Create category (legacy)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CategoryCreatePayload' }
+      responses:
+        '201': { description: Created }
+
+  /categories/{id}:
+    get:
+      tags: [Legacy Categories]
+      summary: Show category (legacy)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { description: OK }
+    put:
+      tags: [Legacy Categories]
+      summary: Update category (legacy)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CategoryUpdatePayload' }
+      responses:
+        '200': { description: OK }
+    delete:
+      tags: [Legacy Categories]
+      summary: Delete category (legacy)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { description: OK }
+
+  /providers:
+    get:
+      tags: [Legacy Providers]
+      summary: List providers (legacy)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: search
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [Legacy Providers]
+      summary: Create provider (legacy)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProviderCreatePayload' }
+      responses:
+        '201': { description: Created }
+
+  /providers/{id}:
+    get:
+      tags: [Legacy Providers]
+      summary: Show provider (legacy)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { description: OK }
+    put:
+      tags: [Legacy Providers]
+      summary: Update provider (legacy)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProviderUpdatePayload' }
+      responses:
+        '200': { description: OK }
+    delete:
+      tags: [Legacy Providers]
+      summary: Delete provider (legacy)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { description: OK }
+
+  /products:
+    get:
+      tags: [Legacy Products]
+      summary: List products (legacy)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: filter[category_id]
+          schema: { type: integer }
+        - in: query
+          name: filter[provider_id]
+          schema: { type: integer }
+        - in: query
+          name: filter[name]
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [Legacy Products]
+      summary: Create product (legacy)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProductCreatePayload' }
+      responses:
+        '201': { description: Created }
+
+  /products/{id}:
+    get:
+      tags: [Legacy Products]
+      summary: Show product (legacy)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { description: OK }
+    put:
+      tags: [Legacy Products]
+      summary: Update product (legacy)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProductUpdatePayload' }
+      responses:
+        '200': { description: OK }
+    delete:
+      tags: [Legacy Products]
+      summary: Delete product (legacy)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { description: OK }
+
+  /admin/category/index:
+    get:
+      tags: [Admin Categories]
+      summary: Category index
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+        - in: query
+          name: tree
+          schema: { type: boolean, default: true }
+      responses:
+        '200': { description: OK }
+  /admin/category/show:
+    get:
+      tags: [Admin Categories]
+      summary: Category show
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: OK }
+  /admin/category/create:
+    post:
+      tags: [Admin Categories]
+      summary: Category create
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CategoryCreatePayload' }
+      responses:
+        '201': { description: Created }
+  /admin/category/update:
+    post:
+      tags: [Admin Categories]
+      summary: Category update
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [id]
+                  properties:
+                    id: { type: integer }
+                - $ref: '#/components/schemas/CategoryUpdatePayload'
+      responses:
+        '200': { description: OK }
+  /admin/category/delete:
+    post:
+      tags: [Admin Categories]
+      summary: Category delete
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id: { type: integer }
+      responses:
+        '200': { description: OK }
+  /admin/category/item-list:
+    get:
+      tags: [Admin Categories]
+      summary: Category item list
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: search
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+
+  /admin/provider/index:
+    get:
+      tags: [Admin Providers]
+      summary: Provider index
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+        - in: query
+          name: search
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+  /admin/provider/show:
+    get:
+      tags: [Admin Providers]
+      summary: Provider show
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: OK }
+  /admin/provider/create:
+    post:
+      tags: [Admin Providers]
+      summary: Provider create
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProviderCreatePayload' }
+      responses:
+        '201': { description: Created }
+  /admin/provider/update:
+    post:
+      tags: [Admin Providers]
+      summary: Provider update
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [id]
+                  properties:
+                    id: { type: integer }
+                - $ref: '#/components/schemas/ProviderUpdatePayload'
+      responses:
+        '200': { description: OK }
+  /admin/provider/delete:
+    post:
+      tags: [Admin Providers]
+      summary: Provider delete
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id: { type: integer }
+      responses:
+        '200': { description: OK }
+  /admin/provider/item-list:
+    get:
+      tags: [Admin Providers]
+      summary: Provider item list
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: search
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+
+  /admin/product/index:
+    get:
+      tags: [Admin Products]
+      summary: Product index
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+        - in: query
+          name: filter[category_id]
+          schema: { type: integer }
+        - in: query
+          name: filter[provider_id]
+          schema: { type: integer }
+        - in: query
+          name: filter[name]
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+  /admin/product/show:
+    get:
+      tags: [Admin Products]
+      summary: Product show
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: OK }
+  /admin/product/create:
+    post:
+      tags: [Admin Products]
+      summary: Product create
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProductCreatePayload' }
+      responses:
+        '201': { description: Created }
+  /admin/product/update:
+    post:
+      tags: [Admin Products]
+      summary: Product update
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [id]
+                  properties:
+                    id: { type: integer }
+                - $ref: '#/components/schemas/ProductUpdatePayload'
+      responses:
+        '200': { description: OK }
+  /admin/product/delete:
+    post:
+      tags: [Admin Products]
+      summary: Product delete
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id: { type: integer }
+      responses:
+        '200': { description: OK }
+  /admin/product/item-list:
+    get:
+      tags: [Admin Products]
+      summary: Product item list
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: search
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: token
+  parameters:
+    IdPath:
+      in: path
+      name: id
+      required: true
+      schema:
+        type: integer
+  schemas:
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          type: object
+          nullable: true
+        token:
+          type: string
+    CategoryCreatePayload:
+      type: object
+      required: [name]
+      properties:
+        provider_id: { type: integer, nullable: true }
+        parent_id: { type: integer, nullable: true }
+        name: { type: string, maxLength: 255 }
+        slug: { type: string, nullable: true }
+    CategoryUpdatePayload:
+      type: object
+      properties:
+        provider_id: { type: integer, nullable: true }
+        parent_id: { type: integer, nullable: true }
+        name: { type: string, maxLength: 255 }
+        slug: { type: string, nullable: true }
+    ProviderCreatePayload:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, maxLength: 255 }
+        inn: { type: string, nullable: true, maxLength: 32 }
+        email: { type: string, nullable: true, format: email }
+        phone: { type: string, nullable: true, maxLength: 32 }
+    ProviderUpdatePayload:
+      type: object
+      properties:
+        name: { type: string, maxLength: 255 }
+        inn: { type: string, nullable: true, maxLength: 32 }
+        email: { type: string, nullable: true, format: email }
+        phone: { type: string, nullable: true, maxLength: 32 }
+    ProductCreatePayload:
+      type: object
+      required: [category_id, name, sku]
+      properties:
+        category_id: { type: integer }
+        name: { type: string, maxLength: 255 }
+        sku: { type: string, maxLength: 64 }
+        sale_price: { type: number, nullable: true, minimum: 0 }
+    ProductUpdatePayload:
+      type: object
+      properties:
+        category_id: { type: integer }
+        name: { type: string, maxLength: 255 }
+        sku: { type: string, maxLength: 64 }
+        sale_price: { type: number, nullable: true, minimum: 0 }
