@@ -17,6 +17,10 @@ class ClientShowActionData
     public static function fromRequest(Request $request): self
     {
         $client = $request->route('client');
+        if (is_numeric($client)) {
+            $client = User::query()->find((int) $client);
+        }
+
         if (! $client instanceof User) {
             throw new ApiException('Client not found.', 404);
         }
@@ -24,4 +28,3 @@ class ClientShowActionData
         return new self($client);
     }
 }
-
