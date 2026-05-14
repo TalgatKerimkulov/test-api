@@ -2,7 +2,7 @@
 
 REST API для учёта партионной закупки, продажи (FIFO) и возвратов товаров.
 
-**Stack:** Laravel 13 · PHP 8.4 · PostgreSQL 16 · Redis 7 · Nginx · Docker · Laravel Sanctum · spatie/laravel-permission
+**Stack:** Laravel 13 · PHP 8.4 (совместимо с `composer.json: ^8.3`) · PostgreSQL 16 · Redis 7 · Nginx · Docker · Laravel Sanctum · spatie/laravel-permission · VictoriaLogs · Queue Worker
 
 ---
 
@@ -81,7 +81,7 @@ Domain layer
 
 ### Требования
 - Docker + Docker Compose
-- Порты 8080 и 6379 свободны на хосте
+- Порты 8080, 5433, 6379 и 9428 свободны на хосте
 
 ### Подъём
 
@@ -94,6 +94,7 @@ docker compose exec app php artisan migrate --seed
 ```
 
 API будет доступен на `http://localhost:8080`.
+VictoriaLogs UI/HTTP API будет доступен на `http://localhost:9428`.
 
 ### Полезные команды
 
@@ -197,6 +198,9 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 - Для двух операций возвратов использованы эквивалентные роуты с другим именованием:
   - `provider-refunds` вместо `batches/refund`
   - `client-refunds` вместо `client-orders/refund`
+- Также доступны каноничные групповые роуты:
+  - `POST /api/v1/client/orders`
+  - `POST /api/v1/client/refunds`
 - Это сделано без изменения архитектурного подхода и без дублирования контрактов.
 
 ### Auth (открытые)
@@ -265,7 +269,7 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 ```
 **201 Created** — создаётся `batch` + `batch_items` + `stock_movements(type=purchase)` + инкремент `storage_stocks`.
 
-### `POST /api/v1/client-orders` — заказ клиента (FIFO) (`client_orders.create`)
+### `POST /api/v1/client-orders` или `POST /api/v1/client/orders` — заказ клиента (FIFO) (`client_orders.create`)
 
 ```json
 {
@@ -292,7 +296,7 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 - Списывает товар со склада, инкрементит `batch_items.qty_refunded_to_provider`.
 - Нельзя превысить `available_qty` (т.е. вернуть проданный товар) → **409** `refund_exceeds_available`.
 
-### `POST /api/v1/client-refunds` — возврат от клиента (`client_orders.refund`)
+### `POST /api/v1/client-refunds` или `POST /api/v1/client/refunds` — возврат от клиента (`client_orders.refund`)
 
 ```json
 {
@@ -349,9 +353,9 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 
 ## Queue Troubleshooting
 
-Если `testapi-queue` не стартует с ошибкой:
+Если `testapi-queue` не стартует с ошибкой вида:
 
-`Composer detected issues in your platform ... require PHP >= 8.4.0`
+`Composer detected issues in your platform ... require PHP >= ...`
 
 проверьте версию PHP в контейнере:
 
@@ -470,7 +474,7 @@ Feature tests (Pest, RefreshDatabase на PostgreSQL):
 app/
   Http/
     Controllers/   legacy + admin modular controllers
-    Requests/      6 FormRequest
+    Requests/      FormRequest для бизнес-эндпоинтов и CRUD
     Resources/     Batch, Order, PurchaseRefund, ClientRefund, BatchItem, OrderItem, etc.
   Services/        Purchase, Order (FIFO), PurchaseRefund, ClientRefund, Stock, AvailableProduct, BatchProfit
   Models/          domain models + File model
