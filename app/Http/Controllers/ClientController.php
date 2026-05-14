@@ -4,15 +4,21 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Enums\UserType;
-use App\Exceptions\RelationConflictException;
-use App\Http\Requests\Clients\StoreClientRequest;
-use App\Http\Requests\Clients\UpdateClientRequest;
-use App\Http\Resources\ClientResource;
-use App\Models\User;
+use App\Actions\Client\ClientDeleteAction;
+use App\Actions\Client\ClientDeleteActionData;
+use App\Actions\Client\ClientIndexAction;
+use App\Actions\Client\ClientIndexActionData;
+use App\Actions\Client\ClientShowAction;
+use App\Actions\Client\ClientShowActionData;
+use App\Actions\Client\ClientStoreAction;
+use App\Actions\Client\ClientStoreActionData;
+use App\Actions\Client\ClientUpdateAction;
+use App\Actions\Client\ClientUpdateActionData;
+use App\Exceptions\ApiException;
+use App\Presenters\Client\ClientViewModel;
+use App\Presenters\ErrorViewModel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 
@@ -28,60 +34,58 @@ class ClientController extends Controller implements HasMiddleware
         ];
     }
 
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(Request $request, ClientIndexAction $action): JsonResponse
     {
-        $clients = User::query()
-            ->clients()
-            ->when($request->string('search')->toString(), fn ($q, $s) => $q->where(function ($q) use ($s) {
-                $q->where('name', 'ilike', "%$s%")->orWhere('email', 'ilike', "%$s%");
-            }))
-            ->orderBy('id')
-            ->paginate((int) $request->integer('per_page', 15));
-
-        return ClientResource::collection($clients);
-    }
-
-    public function store(StoreClientRequest $request): JsonResponse
-    {
-        $client = User::create([
-            'type' => UserType::Client->value,
-            'name' => $request->string('name'),
-            'phone' => $request->input('phone'),
-            'email' => $request->input('email'),
-            'address' => $request->input('address'),
-        ]);
-
-        return (new ClientResource($client))->response()->setStatusCode(201);
-    }
-
-    public function show(User $client): ClientResource
-    {
-        abort_unless($client->isClient(), 404);
-
-        return new ClientResource($client);
-    }
-
-    public function update(UpdateClientRequest $request, User $client): ClientResource
-    {
-        abort_unless($client->isClient(), 404);
-        $client->update($request->validated());
-
-        return new ClientResource($client->fresh());
-    }
-
-    public function destroy(User $client): JsonResponse
-    {
-        abort_unless($client->isClient(), 404);
-
-        if ($client->orders()->exists()) {
-            throw new RelationConflictException(
-                'client_has_orders',
-                'Client has orders and cannot be deleted.',
-            );
+        try {
+            $output = $action->handle(ClientIndexActionData::fromRequest($request));
+        } catch (ApiException $e) {
+            return ErrorViewModel::present($e->getMessage(), $e->httpStatus(), $e->errorCode());
         }
 
-        $client->delete();
+        return ClientViewModel::presentCollection($output);
+    }
 
-        return response()->json(['message' => 'Client deleted']);
+    public function store(Request $request, ClientStoreAction $action): JsonResponse
+    {
+        try {
+            $output = $action->handle(ClientStoreActionData::fromRequest($request));
+        } catch (ApiException $e) {
+            return ErrorViewModel::present($e->getMessage(), $e->httpStatus(), $e->errorCode());
+        }
+
+        return ClientViewModel::presentItem($output, 201);
+    }
+
+    public function show(Request $request, ClientShowAction $action): JsonResponse
+    {
+        try {
+            $output = $action->handle(ClientShowActionData::fromRequest($request));
+        } catch (ApiException $e) {
+            return ErrorViewModel::present($e->getMessage(), $e->httpStatus(), $e->errorCode());
+        }
+
+        return ClientViewModel::presentItem($output);
+    }
+
+    public function update(Request $request, ClientUpdateAction $action): JsonResponse
+    {
+        try {
+            $output = $action->handle(ClientUpdateActionData::fromRequest($request));
+        } catch (ApiException $e) {
+            return ErrorViewModel::present($e->getMessage(), $e->httpStatus(), $e->errorCode());
+        }
+
+        return ClientViewModel::presentItem($output);
+    }
+
+    public function destroy(Request $request, ClientDeleteAction $action): JsonResponse
+    {
+        try {
+            $action->handle(ClientDeleteActionData::fromRequest($request));
+        } catch (ApiException $e) {
+            return ErrorViewModel::present($e->getMessage(), $e->httpStatus(), $e->errorCode());
+        }
+
+        return ClientViewModel::presentDeleted();
     }
 }

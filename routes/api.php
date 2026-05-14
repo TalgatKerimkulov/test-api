@@ -21,10 +21,7 @@ use App\Http\Controllers\StorageController;
 use App\Http\Controllers\StorageReportController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserRoleController;
-use App\Models\User;
 use Illuminate\Support\Facades\Route;
-
-Route::bind('client', fn ($value) => User::query()->where('id', $value)->firstOrFail());
 
 Route::prefix('v1')->group(function (): void {
     Route::post('/auth/register', [AuthController::class, 'register']);
@@ -44,7 +41,7 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/users/{user}/roles', [UserRoleController::class, 'store']);
 
         Route::apiResource('providers', ProviderController::class);
-        Route::apiResource('clients', ClientController::class)->parameters(['clients' => 'client']);
+        Route::apiResource('clients', ClientController::class);
         Route::apiResource('categories', CategoryController::class);
 
         Route::prefix('admin')->middleware(['admin.scope', 'check.permission'])->group(function (): void {
@@ -99,11 +96,13 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/provider-refunds', [PurchaseRefundController::class, 'store'])
             ->middleware('permission:purchases.refund,sanctum');
 
-        Route::post('/client-orders', [OrderController::class, 'store'])
-            ->middleware('permission:client_orders.create,sanctum');
+        Route::prefix('client')->group(function (): void {
+            Route::post('/orders', [OrderController::class, 'store'])
+                ->middleware('permission:client_orders.create,sanctum');
 
-        Route::post('/client-refunds', [ClientRefundController::class, 'store'])
-            ->middleware('permission:client_orders.refund,sanctum');
+            Route::post('/refunds', [ClientRefundController::class, 'store'])
+                ->middleware('permission:client_orders.refund,sanctum');
+        });
 
         Route::get('/batches/profit', [BatchProfitController::class, 'index'])
             ->middleware('permission:reports.batch_profit,sanctum');

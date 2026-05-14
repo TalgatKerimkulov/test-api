@@ -34,4 +34,9 @@ class Product extends Model
     {
         return $this->hasMany(BatchItem::class);
     }
+
+    public function variations(): HasMany
+    {
+        return $this->hasMany(ProductVariation::class);
+    }
 }

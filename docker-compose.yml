@@ -50,6 +50,25 @@ services:
       - "6379:6379"
     networks: [app-net]
 
+  victoria-logs:
+    image: victoriametrics/victoria-logs:latest
+    container_name: testapi-victoria-logs
+    ports:
+      - "9428:9428"
+    volumes:
+      - victoria-logs-data:/victoria-logs-data
+    command:
+      - -storageDataPath=/victoria-logs-data
+      - -retentionPeriod=4w
+      - -httpListenAddr=:9428
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:9428/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks: [app-net]
+
   queue:
     build:
       context: .
@@ -70,3 +89,4 @@ networks:
 
 volumes:
   pgdata:
+  victoria-logs-data:

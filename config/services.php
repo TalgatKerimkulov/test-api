@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'victoria' => [
+        'base_uri' => env('VICTORIA_LOGS_BASE_URI', 'http://victoria-logs:9428'),
+        'login' => env('VICTORIA_LOGS_LOGIN'),
+        'password' => env('VICTORIA_LOGS_PASSWORD'),
+    ],
+
 ];

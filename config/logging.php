@@ -1,5 +1,6 @@
 <?php
 
+use App\Logging\VictoriaLogHandler;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
@@ -121,6 +122,13 @@ return [
         'null' => [
             'driver' => 'monolog',
             'handler' => NullHandler::class,
+        ],
+
+        'victoria' => [
+            'driver' => 'monolog',
+            'handler' => VictoriaLogHandler::class,
+            'level' => env('LOG_LEVEL', 'debug'),
+            'processors' => [PsrLogMessageProcessor::class],
         ],
 
         'emergency' => [

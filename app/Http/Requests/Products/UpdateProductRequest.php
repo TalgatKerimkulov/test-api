@@ -23,6 +23,13 @@ class UpdateProductRequest extends FormRequest
             'name' => ['sometimes', 'string', 'max:255'],
             'sku' => ['sometimes', 'string', 'max:64', Rule::unique('products', 'sku')->ignore($id)->whereNull('deleted_at')],
             'sale_price' => ['sometimes', 'nullable', 'numeric', 'min:0'],
+            'variations' => ['sometimes', 'array'],
+            'variations.*.id' => ['sometimes', 'integer', 'exists:product_variations,id'],
+            'variations.*.sku' => ['required_with:variations', 'string', 'max:64', 'distinct'],
+            'variations.*.name' => ['required_with:variations', 'string', 'max:255'],
+            'variations.*.sale_price' => ['nullable', 'numeric', 'min:0'],
+            'variations.*.attributes' => ['nullable', 'array'],
+            'variations.*.is_active' => ['nullable', 'boolean'],
         ];
     }
 }
