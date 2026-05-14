@@ -4,34 +4,21 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Auth;
 
+use App\Actions\Auth\Common\AuthAction;
+use App\Actions\Auth\Common\ClientCompanyActionData;
+use App\Actions\Auth\Common\LoginActionData;
+use App\Actions\Auth\Common\RegisterActionData;
 use App\Enums\UserType;
-use App\Enums\Role as RoleEnum;
-use App\Http\Requests\Auth\ClientCompanyRequest;
-use App\Http\Requests\Auth\LoginRequest;
-use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Resources\UserResource;
-use App\Models\Provider;
-use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
-use Spatie\Permission\Models\Role;
 
 class AuthController
 {
-    public function register(RegisterRequest $request): JsonResponse
+    public function register(Request $request, AuthAction $service): JsonResponse
     {
-        $user = User::create([
-            'type' => UserType::Client->value,
-            'name' => $request->string('name'),
-            'email' => $request->string('email'),
-            'password' => $request->string('password'),
-        ]);
-        $user->assignRole(Role::findByName(RoleEnum::Client->value, 'sanctum'));
-
-        $token = $user->createToken('api')->plainTextToken;
+        [$user, $token] = $service->register(RegisterActionData::fromRequest($request)->validated);
 
         return response()->json([
             'user' => new UserResource($user),
@@ -39,22 +26,22 @@ class AuthController
         ], 201);
     }
 
-    public function login(LoginRequest $request): JsonResponse
+    public function login(Request $request, AuthAction $service): JsonResponse
     {
-        return $this->performLogin($request, null);
+        return $this->performLogin($request, $service, null);
     }
 
-    public function adminLogin(LoginRequest $request): JsonResponse
+    public function adminLogin(Request $request, AuthAction $service): JsonResponse
     {
-        return $this->performLogin($request, UserType::Admin);
+        return $this->performLogin($request, $service, UserType::Admin);
     }
 
-    public function clientLogin(LoginRequest $request): JsonResponse
+    public function clientLogin(Request $request, AuthAction $service): JsonResponse
     {
-        return $this->performLogin($request, UserType::Client);
+        return $this->performLogin($request, $service, UserType::Client);
     }
 
-    public function createClientCompany(ClientCompanyRequest $request): JsonResponse
+    public function createClientCompany(Request $request, AuthAction $service): JsonResponse
     {
         $user = $request->user();
         if (! $user) {
@@ -63,42 +50,18 @@ class AuthController
             ]);
         }
 
-        if ($user->type !== UserType::Client) {
-            throw ValidationException::withMessages([
-                'user' => ['Only clients can attach a company.'],
-            ]);
-        }
-
-        $provider = DB::transaction(function () use ($request, $user): Provider {
-            $provider = Provider::create($request->validated());
-            $user->update(['provider_id' => $provider->id]);
-
-            return $provider;
-        });
+        $input = ClientCompanyActionData::fromRequest($request);
+        [$provider, $freshUser] = $service->createClientCompany($user, $input->validated);
 
         return response()->json([
             'provider' => $provider,
-            'user' => new UserResource($user->fresh()),
+            'user' => new UserResource($freshUser),
         ], 201);
     }
 
-    private function performLogin(LoginRequest $request, ?UserType $requiredType): JsonResponse
+    private function performLogin(Request $request, AuthAction $service, ?UserType $requiredType): JsonResponse
     {
-        $user = User::where('email', $request->string('email'))->first();
-
-        if (! $user || ! Hash::check((string) $request->string('password'), (string) $user->password)) {
-            throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
-            ]);
-        }
-
-        if ($requiredType !== null && $user->type !== $requiredType) {
-            throw ValidationException::withMessages([
-                'email' => ['This login endpoint does not allow the current user type.'],
-            ]);
-        }
-
-        $token = $user->createToken('api')->plainTextToken;
+        [$user, $token] = $service->login(LoginActionData::fromRequest($request)->validated, $requiredType);
 
         return response()->json([
             'user' => new UserResource($user),

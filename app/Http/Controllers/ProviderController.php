@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Exceptions\RelationConflictException;
-use App\Http\Requests\Providers\StoreProviderRequest;
-use App\Http\Requests\Providers\UpdateProviderRequest;
+use App\Actions\Provider\Common\ProviderAction;
+use App\Actions\Provider\Common\ProviderStoreActionData;
+use App\Actions\Provider\Common\ProviderUpdateActionData;
 use App\Http\Resources\ProviderResource;
 use App\Models\Provider;
 use Illuminate\Http\JsonResponse;
@@ -27,19 +27,16 @@ class ProviderController extends Controller implements HasMiddleware
         ];
     }
 
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(Request $request, ProviderAction $service): AnonymousResourceCollection
     {
-        $providers = Provider::query()
-            ->when($request->string('search')->toString(), fn ($q, $s) => $q->where('name', 'ilike', "%$s%"))
-            ->orderBy('id')
-            ->paginate((int) $request->integer('per_page', 15));
+        $providers = $service->index($request);
 
         return ProviderResource::collection($providers);
     }
 
-    public function store(StoreProviderRequest $request): JsonResponse
+    public function store(Request $request, ProviderAction $service): JsonResponse
     {
-        $provider = Provider::create($request->validated());
+        $provider = $service->store(ProviderStoreActionData::fromRequest($request)->validated);
 
         return (new ProviderResource($provider))->response()->setStatusCode(201);
     }
@@ -49,22 +46,15 @@ class ProviderController extends Controller implements HasMiddleware
         return new ProviderResource($provider);
     }
 
-    public function update(UpdateProviderRequest $request, Provider $provider): ProviderResource
+    public function update(Request $request, Provider $provider, ProviderAction $service): ProviderResource
     {
-        $provider->update($request->validated());
-
-        return new ProviderResource($provider->fresh());
+        $input = ProviderUpdateActionData::fromRequest($request, $provider);
+        return new ProviderResource($service->update($input->provider, $input->validated));
     }
 
-    public function destroy(Provider $provider): JsonResponse
+    public function destroy(Provider $provider, ProviderAction $service): JsonResponse
     {
-        if ($provider->batches()->exists() || $provider->categories()->exists()) {
-            throw new RelationConflictException(
-                'provider_has_relations',
-                'Provider has related categories or batches and cannot be deleted.',
-            );
-        }
-        $provider->delete();
+        $service->destroy($provider);
 
         return response()->json(['message' => 'Provider deleted']);
     }

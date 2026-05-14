@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\DTO\OrderPayload;
-use App\Http\Requests\StoreOrderRequest;
+use App\Actions\Client\ClientOrderCreateAction;
+use App\Actions\Client\ClientOrderCreateActionData;
 use App\Http\Resources\OrderResource;
-use App\Services\OrderService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class OrderController
 {
-    public function store(StoreOrderRequest $request, OrderService $service): JsonResponse
+    public function store(Request $request, ClientOrderCreateAction $action): JsonResponse
     {
-        $order = $service->create(OrderPayload::fromRequest($request));
+        $order = $action->handle(ClientOrderCreateActionData::fromRequest($request));
 
         return (new OrderResource($order))->response()->setStatusCode(201);
     }

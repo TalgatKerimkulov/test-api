@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Exceptions\RelationConflictException;
-use App\Http\Requests\Categories\StoreCategoryRequest;
-use App\Http\Requests\Categories\UpdateCategoryRequest;
+use App\Actions\Category\Common\CategoryAction;
+use App\Actions\Category\Common\CategoryStoreActionData;
+use App\Actions\Category\Common\CategoryUpdateActionData;
 use App\Http\Resources\CategoryResource;
 use App\Models\Category;
 use Illuminate\Http\JsonResponse;
@@ -14,7 +14,6 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
-use Illuminate\Support\Str;
 
 class CategoryController extends Controller implements HasMiddleware
 {
@@ -28,62 +27,33 @@ class CategoryController extends Controller implements HasMiddleware
         ];
     }
 
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(Request $request, CategoryAction $service): AnonymousResourceCollection
     {
-        $query = Category::query()->orderBy('id');
-
-        if ($request->boolean('tree', true)) {
-            $query->whereNull('parent_id')->with('children.children.children');
-        }
-
-        return CategoryResource::collection($query->get());
+        return CategoryResource::collection($service->index($request));
     }
 
-    public function store(StoreCategoryRequest $request): JsonResponse
+    public function store(Request $request, CategoryAction $service): JsonResponse
     {
-        $data = $request->validated();
-        $data['slug'] = $data['slug'] ?? $this->uniqueSlug($data['name']);
-        $category = Category::create($data);
+        $category = $service->store(CategoryStoreActionData::fromRequest($request)->validated);
 
         return (new CategoryResource($category))->response()->setStatusCode(201);
     }
 
-    public function show(Category $category): CategoryResource
+    public function show(Category $category, CategoryAction $service): CategoryResource
     {
-        $category->load('children');
-
-        return new CategoryResource($category);
+        return new CategoryResource($service->show($category));
     }
 
-    public function update(UpdateCategoryRequest $request, Category $category): CategoryResource
+    public function update(Request $request, Category $category, CategoryAction $service): CategoryResource
     {
-        $category->update($request->validated());
-
-        return new CategoryResource($category->fresh());
+        $input = CategoryUpdateActionData::fromRequest($request, $category);
+        return new CategoryResource($service->update($input->category, $input->validated));
     }
 
-    public function destroy(Category $category): JsonResponse
+    public function destroy(Category $category, CategoryAction $service): JsonResponse
     {
-        if ($category->children()->exists() || $category->products()->exists()) {
-            throw new RelationConflictException(
-                'category_has_children_or_products',
-                'Category has child categories or products and cannot be deleted.',
-            );
-        }
-        $category->delete();
+        $service->destroy($category);
 
         return response()->json(['message' => 'Category deleted']);
-    }
-
-    private function uniqueSlug(string $name): string
-    {
-        $base = Str::slug($name);
-        $slug = $base;
-        $i = 2;
-        while (Category::where('slug', $slug)->exists()) {
-            $slug = $base.'-'.$i++;
-        }
-
-        return $slug;
     }
 }

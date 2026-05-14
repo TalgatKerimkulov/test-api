@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Enums\Role;
-use App\Enums\UserType;
-use App\Http\Requests\Users\StoreUserRequest;
-use App\Http\Requests\Users\UpdateUserRequest;
+use App\Actions\User\Common\UserAction;
+use App\Actions\User\Common\UserStoreActionData;
+use App\Actions\User\Common\UserUpdateActionData;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -28,29 +27,16 @@ class UserController extends Controller implements HasMiddleware
         ];
     }
 
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(Request $request, UserAction $service): AnonymousResourceCollection
     {
-        $users = User::query()
-            ->staff()
-            ->when($request->string('search')->toString(), fn ($q, $s) => $q->where(function ($q) use ($s) {
-                $q->where('name', 'ilike', "%$s%")->orWhere('email', 'ilike', "%$s%");
-            }))
-            ->orderBy('id')
-            ->paginate((int) $request->integer('per_page', 15));
+        $users = $service->index($request);
 
         return UserResource::collection($users);
     }
 
-    public function store(StoreUserRequest $request): JsonResponse
+    public function store(Request $request, UserAction $service): JsonResponse
     {
-        $user = User::create([
-            'type' => $this->mapRoleToType($request->string('role')->toString()),
-            'name' => $request->string('name'),
-            'email' => $request->string('email'),
-            'phone' => $request->input('phone'),
-            'password' => $request->string('password'),
-        ]);
-        $user->syncRoles([$request->string('role')->toString()]);
+        $user = $service->store(UserStoreActionData::fromRequest($request)->validated);
 
         return (new UserResource($user->fresh()))->response()->setStatusCode(201);
     }
@@ -60,36 +46,16 @@ class UserController extends Controller implements HasMiddleware
         return new UserResource($user);
     }
 
-    public function update(UpdateUserRequest $request, User $user): UserResource
+    public function update(Request $request, User $user, UserAction $service): UserResource
     {
-        $data = $request->only(['name', 'email', 'phone', 'password']);
-        if ($request->filled('role')) {
-            $data['type'] = $this->mapRoleToType($request->string('role')->toString());
-        }
-        $user->update($data);
-
-        if ($request->filled('role')) {
-            $user->syncRoles([$request->string('role')->toString()]);
-        }
-
-        return new UserResource($user->fresh());
+        $input = UserUpdateActionData::fromRequest($request, $user);
+        return new UserResource($service->update($input->user, $input->validated));
     }
 
-    public function destroy(User $user): JsonResponse
+    public function destroy(User $user, UserAction $service): JsonResponse
     {
-        $user->tokens()->delete();
-        $user->delete();
+        $service->destroy($user);
 
         return response()->json(['message' => 'User deactivated'], 200);
-    }
-
-    private function mapRoleToType(string $role): string
-    {
-        return match ($role) {
-            Role::Admin->value => UserType::Admin->value,
-            Role::Manager->value => UserType::Manager->value,
-            Role::Accountant->value, Role::WarehouseManager->value => UserType::Employee->value,
-            default => UserType::Employee->value,
-        };
     }
 }

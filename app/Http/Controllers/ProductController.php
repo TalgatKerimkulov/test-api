@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Actions\Product\Api\ProductStoreAction;
+use App\Actions\Product\Api\ProductUpdateAction;
+use App\Actions\Product\Api\ProductUpsertActionData;
 use App\Exceptions\RelationConflictException;
 use App\Http\Requests\Products\StoreProductRequest;
 use App\Http\Requests\Products\UpdateProductRequest;
@@ -42,17 +45,16 @@ class ProductController extends Controller implements HasMiddleware
         return ProductResource::collection($products);
     }
 
-    public function store(StoreProductRequest $request): JsonResponse
+    public function store(StoreProductRequest $request, ProductStoreAction $action): JsonResponse
     {
-        $data = $request->validated();
-        if (isset($data['sale_price'])) {
-            $data['default_sale_price'] = $data['sale_price'];
-            unset($data['sale_price']);
-        }
-        $product = Product::create($data);
-        $this->syncVariations($product, $request->input('variations', []));
+        $product = $action->handle(
+            ProductUpsertActionData::fromValidated(
+                validated: $request->validated(),
+                variations: (array) $request->input('variations', []),
+            ),
+        );
 
-        return (new ProductResource($product->fresh('variations')))->response()->setStatusCode(201);
+        return (new ProductResource($product))->response()->setStatusCode(201);
     }
 
     public function show(Product $product): ProductResource
@@ -60,19 +62,17 @@ class ProductController extends Controller implements HasMiddleware
         return new ProductResource($product->load('variations'));
     }
 
-    public function update(UpdateProductRequest $request, Product $product): ProductResource
+    public function update(UpdateProductRequest $request, Product $product, ProductUpdateAction $action): ProductResource
     {
-        $data = $request->validated();
-        if (array_key_exists('sale_price', $data)) {
-            $data['default_sale_price'] = $data['sale_price'];
-            unset($data['sale_price']);
-        }
-        $product->update($data);
-        if ($request->has('variations')) {
-            $this->syncVariations($product, (array) $request->input('variations', []));
-        }
+        $updated = $action->handle(
+            ProductUpsertActionData::fromValidated(
+                validated: $request->validated(),
+                variations: $request->has('variations') ? (array) $request->input('variations', []) : null,
+                product: $product,
+            ),
+        );
 
-        return new ProductResource($product->fresh('variations'));
+        return new ProductResource($updated);
     }
 
     public function destroy(Product $product): JsonResponse
@@ -86,33 +86,5 @@ class ProductController extends Controller implements HasMiddleware
         $product->delete();
 
         return response()->json(['message' => 'Product deleted']);
-    }
-
-    /**
-     * @param array<int, array<string, mixed>> $variations
-     */
-    private function syncVariations(Product $product, array $variations): void
-    {
-        if ($variations === []) {
-            return;
-        }
-
-        $incomingIds = [];
-        foreach ($variations as $variation) {
-            $existingId = $variation['id'] ?? null;
-            $model = $product->variations()->updateOrCreate(
-                ['id' => $existingId],
-                [
-                    'sku' => $variation['sku'],
-                    'name' => $variation['name'],
-                    'sale_price' => $variation['sale_price'] ?? null,
-                    'attributes' => $variation['attributes'] ?? null,
-                    'is_active' => $variation['is_active'] ?? true,
-                ],
-            );
-            $incomingIds[] = $model->id;
-        }
-
-        $product->variations()->whereNotIn('id', $incomingIds)->delete();
     }
 }

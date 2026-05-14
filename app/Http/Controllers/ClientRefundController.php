@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\DTO\ClientRefundPayload;
-use App\Http\Requests\StoreClientRefundRequest;
+use App\Actions\Client\ClientRefundCreateAction;
+use App\Actions\Client\ClientRefundCreateActionData;
 use App\Http\Resources\ClientRefundResource;
-use App\Services\ClientRefundService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class ClientRefundController
 {
-    public function store(StoreClientRefundRequest $request, ClientRefundService $service): JsonResponse
+    public function store(Request $request, ClientRefundCreateAction $action): JsonResponse
     {
-        $refund = $service->create(ClientRefundPayload::fromRequest($request));
+        $refund = $action->handle(ClientRefundCreateActionData::fromRequest($request));
 
         return (new ClientRefundResource($refund))->response()->setStatusCode(201);
     }

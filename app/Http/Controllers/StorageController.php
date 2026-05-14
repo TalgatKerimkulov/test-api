@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Exceptions\RelationConflictException;
-use App\Http\Requests\Storages\StoreStorageRequest;
-use App\Http\Requests\Storages\UpdateStorageRequest;
+use App\Actions\Storage\Common\StorageAction;
+use App\Actions\Storage\Common\StorageStoreActionData;
+use App\Actions\Storage\Common\StorageUpdateActionData;
 use App\Http\Resources\StorageResource;
 use App\Models\Storage;
 use Illuminate\Http\JsonResponse;
@@ -27,16 +27,16 @@ class StorageController extends Controller implements HasMiddleware
         ];
     }
 
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(Request $request, StorageAction $service): AnonymousResourceCollection
     {
-        $storages = Storage::query()->orderBy('id')->paginate((int) $request->integer('per_page', 15));
+        $storages = $service->index($request);
 
         return StorageResource::collection($storages);
     }
 
-    public function store(StoreStorageRequest $request): JsonResponse
+    public function store(Request $request, StorageAction $service): JsonResponse
     {
-        $storage = Storage::create($request->validated());
+        $storage = $service->store(StorageStoreActionData::fromRequest($request)->validated);
 
         return (new StorageResource($storage))->response()->setStatusCode(201);
     }
@@ -46,22 +46,15 @@ class StorageController extends Controller implements HasMiddleware
         return new StorageResource($storage);
     }
 
-    public function update(UpdateStorageRequest $request, Storage $storage): StorageResource
+    public function update(Request $request, Storage $storage, StorageAction $service): StorageResource
     {
-        $storage->update($request->validated());
-
-        return new StorageResource($storage->fresh());
+        $input = StorageUpdateActionData::fromRequest($request, $storage);
+        return new StorageResource($service->update($input->storage, $input->validated));
     }
 
-    public function destroy(Storage $storage): JsonResponse
+    public function destroy(Storage $storage, StorageAction $service): JsonResponse
     {
-        if ($storage->stocks()->where('qty', '>', 0)->exists() || $storage->stockMovements()->exists()) {
-            throw new RelationConflictException(
-                'storage_in_use',
-                'Storage has stock or stock movements and cannot be deleted.',
-            );
-        }
-        $storage->delete();
+        $service->destroy($storage);
 
         return response()->json(['message' => 'Storage deleted']);
     }

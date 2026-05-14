@@ -104,6 +104,12 @@ Route::prefix('v1')->group(function (): void {
                 ->middleware('permission:client_orders.refund,sanctum');
         });
 
+        // Backward-compatible aliases for legacy clients.
+        Route::post('/client-orders', [OrderController::class, 'store'])
+            ->middleware('permission:client_orders.create,sanctum');
+        Route::post('/client-refunds', [ClientRefundController::class, 'store'])
+            ->middleware('permission:client_orders.refund,sanctum');
+
         Route::get('/batches/profit', [BatchProfitController::class, 'index'])
             ->middleware('permission:reports.batch_profit,sanctum');
     });
